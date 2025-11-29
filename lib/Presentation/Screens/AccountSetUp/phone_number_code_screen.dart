@@ -6,8 +6,61 @@ import 'package:HomeEase/Presentation/Screens/AccountSetUp/location_access_scree
 import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/enter_phone_code_widget.dart';
 
-class PhoneNumberCodeScreen extends StatelessWidget {
-  const PhoneNumberCodeScreen({super.key});
+import 'package:HomeEase/services/auth_service.dart';
+import 'package:HomeEase/Presentation/Widgets/bottom_navigation_bar_widget.dart';
+import 'package:HomeEase/models/user_model.dart';
+
+class PhoneNumberCodeScreen extends StatefulWidget {
+  final String phoneNumber;
+  const PhoneNumberCodeScreen({super.key, required this.phoneNumber});
+
+  @override
+  State<PhoneNumberCodeScreen> createState() => _PhoneNumberCodeScreenState();
+}
+
+class _PhoneNumberCodeScreenState extends State<PhoneNumberCodeScreen> {
+  bool _isLoading = false;
+
+  Future<void> _verifyAndSave() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simulate verification (or implement if API exists)
+    // For now, just update the user profile with the phone number
+    final updatedUser = await authService.updateUser({
+      'phoneNumber': widget.phoneNumber,
+    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (updatedUser != null) {
+        if (updatedUser.role == UserRole.serviceSeeker) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const BottomNavigationBarWidget(),
+            ),
+            (route) => false,
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LocationAccessScreen(),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update phone number.')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,18 +101,13 @@ class PhoneNumberCodeScreen extends StatelessWidget {
               height: 57,
             ),
             InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LocationAccessScreen(),
-                  ),
-                );
-              },
-              child: const ButtonStyleWidget(
-                title: AppStrings.verify,
-                colors: AppColors.blueColors,
-              ),
+              onTap: _isLoading ? null : _verifyAndSave,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const ButtonStyleWidget(
+                      title: AppStrings.verify,
+                      colors: AppColors.blueColors,
+                    ),
             ),
             const SizedBox(
               height: 24,

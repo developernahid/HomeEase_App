@@ -7,6 +7,8 @@ import 'package:HomeEase/Presentation/Widgets/bottom_navigation_bar_widget.dart'
 import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/pricing_option_widget.dart';
 
+import 'package:HomeEase/services/auth_service.dart';
+
 class HowToCaseScreen extends StatefulWidget {
   const HowToCaseScreen({super.key});
 
@@ -20,6 +22,7 @@ class _HowToCaseState extends State<HowToCaseScreen> {
   final TextEditingController _flatFeeController = TextEditingController();
   final TextEditingController _additionalInfoController =
       TextEditingController();
+  bool _isLoading = false;
 
   navigateToAnotherScreen() {
     return Navigator.of(context).pushReplacement(
@@ -27,6 +30,33 @@ class _HowToCaseState extends State<HowToCaseScreen> {
         builder: (context) => const BottomNavigationBarWidget(),
       ),
     );
+  }
+
+  Future<void> _savePricingDetails() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final updatedUser = await authService.updateUser({
+      'pricingMethod': _selectedPricingMethod,
+      'hourlyFee': _hourlyFeeController.text.trim(),
+      'flatFee': _flatFeeController.text.trim(),
+      'additionalInfo': _additionalInfoController.text.trim(),
+    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (updatedUser != null) {
+        _showConfirmationDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update pricing details.')),
+        );
+      }
+    }
   }
 
   _showConfirmationDialog() {
@@ -164,11 +194,13 @@ class _HowToCaseState extends State<HowToCaseScreen> {
                 height: 30,
               ),
               InkWell(
-                onTap: _showConfirmationDialog,
-                child: const ButtonStyleWidget(
-                  title: AppStrings.submit,
-                  colors: AppColors.blueColors,
-                ),
+                onTap: _isLoading ? null : _savePricingDetails,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : const ButtonStyleWidget(
+                        title: AppStrings.submit,
+                        colors: AppColors.blueColors,
+                      ),
               ),
             ],
           ),

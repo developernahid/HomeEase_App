@@ -6,14 +6,9 @@ import 'package:HomeEase/AppUtils/app_text_style.dart';
 import 'package:HomeEase/Presentation/Widgets/paid_box_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/schedule_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/text_container_widget.dart';
-
-/*
-App Name: HomeEase
-Description: Home Services Booking Platform
-Author: Made by team HomeEase
-Date: November 2025
-Team Members name: Nahid Hasan, Labiba Liaqute, Sadia Akter, Kanis Fatema, Maymuna Parvin
-*/
+import 'package:HomeEase/models/booking_model.dart';
+import 'package:HomeEase/services/auth_service.dart';
+import 'package:HomeEase/services/booking_service.dart';
 
 class OrderScreens extends StatefulWidget {
   const OrderScreens({super.key});
@@ -26,9 +21,52 @@ class _OrderScreensState extends State<OrderScreens> {
   bool unpaid = true;
   bool paid = false;
   bool schedule = false;
+  List<Booking> _bookings = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
+  }
+
+  Future<void> _fetchBookings() async {
+    try {
+      final user = authService.currentUser.value;
+      if (user != null) {
+        final bookings = await BookingService.getBookingsByEmail(user.email);
+        if (mounted) {
+          setState(() {
+            _bookings = bookings;
+            _isLoading = false;
+          });
+        }
+      } else {
+        // Handle case where user is not logged in or email is missing
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching bookings: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   Widget orderBody(bool unpaid, bool paid) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (unpaid) {
+      final unpaidBookings =
+          _bookings.where((b) => b.status == 'Pending').toList();
       return Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,17 +78,23 @@ class _OrderScreensState extends State<OrderScreens> {
           const SizedBox(
             height: 7,
           ),
-          const PaidBoxStyleWidget(
-            pay: true,
-            icons: AppImages.plumbericonImg,
-            title: AppStrings.plumbing,
-            amount: 200.00,
-            date: 'May 28,2024',
-            name: 'Janavi',
-          ),
+          if (unpaidBookings.isEmpty)
+            const Text("No unpaid bookings.")
+          else
+            ...unpaidBookings.map((booking) => PaidBoxStyleWidget(
+                  pay: true,
+                  icons: booking.service.image ?? AppImages.plumbericonImg,
+                  title: booking.service.title,
+                  amount: 0.0, // Price not available in Booking model
+                  date: 'Date', // Date not available in Booking model
+                  name: booking.name,
+                )),
         ],
       );
     } else if (paid) {
+      // Assuming 'Completed' or similar for paid, but API only lists Pending, Approved, Rejected.
+      // Maybe 'Rejected' goes here or we don't have paid status yet.
+      // For now, let's show nothing or a placeholder.
       return Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,25 +106,12 @@ class _OrderScreensState extends State<OrderScreens> {
           const SizedBox(
             height: 7,
           ),
-          const PaidBoxStyleWidget(
-            pay: false,
-            icons: AppImages.plumbericonImg,
-            title: AppStrings.plumbing,
-            amount: 300.00,
-            date: 'May 25,2024',
-            name: 'Janavi',
-          ),
-          const PaidBoxStyleWidget(
-            pay: false,
-            icons: AppImages.paintericonImg,
-            title: AppStrings.painter,
-            amount: 500.00,
-            date: 'May 24,2024',
-            name: 'Varun',
-          ),
+          const Text("No paid bookings."),
         ],
       );
     } else {
+      final scheduledBookings =
+          _bookings.where((b) => b.status == 'Approved').toList();
       return Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,14 +123,17 @@ class _OrderScreensState extends State<OrderScreens> {
           const SizedBox(
             height: 7,
           ),
-          const ScheduleStyleWidget(
-            icons: AppImages.plumbericonImg,
-            title: AppStrings.plumbing,
-            amount: 200.00,
-            date: "May 28,2024",
-            time: '10:00 AM',
-            name: "Janavi",
-          ),
+          if (scheduledBookings.isEmpty)
+            const Text("No upcoming schedules.")
+          else
+            ...scheduledBookings.map((booking) => ScheduleStyleWidget(
+                  icons: booking.service.image ?? AppImages.plumbericonImg,
+                  title: booking.service.title,
+                  amount: 0.0,
+                  date: "Date",
+                  time: 'Time',
+                  name: booking.name,
+                )),
         ],
       );
     }
@@ -194,7 +228,8 @@ class _OrderScreensState extends State<OrderScreens> {
               height: 12,
             ),
             // (unpaid)? Expanded(child: Column()) : {(paid)? Expanded(child: Column(),): Expanded(child: Column(),)},
-            orderBody(unpaid, paid),
+            Expanded(
+                child: SingleChildScrollView(child: orderBody(unpaid, paid))),
           ],
         ),
       ),

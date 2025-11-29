@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:HomeEase/AppUtils/app_colors.dart';
 import 'package:HomeEase/AppUtils/app_strings.dart';
 import 'package:HomeEase/AppUtils/app_text_style.dart';
+import 'package:HomeEase/Presentation/Widgets/custom_image_widget.dart';
 
 class ScheduleStyleWidget extends StatelessWidget {
   final String icons;
@@ -45,7 +46,11 @@ class ScheduleStyleWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              Image.asset(icons),
+              CustomImageWidget(
+                imageUrl: icons,
+                height: 40,
+                width: 40,
+              ),
               const SizedBox(
                 width: 12,
               ),

@@ -169,7 +169,10 @@ class _PhoneNumberState extends State<PhoneNumberScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const PhoneNumberCodeScreen(),
+                    builder: (context) => PhoneNumberCodeScreen(
+                      phoneNumber:
+                          "+$selectedNumber${numberController.text.trim()}",
+                    ),
                   ),
                 );
               },

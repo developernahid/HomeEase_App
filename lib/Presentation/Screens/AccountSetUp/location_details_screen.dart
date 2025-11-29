@@ -7,8 +7,11 @@ import 'package:HomeEase/Presentation/Screens/AccountSetUp/about_service_screen.
 import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/textfromfield_widget.dart';
 
+import 'package:HomeEase/services/auth_service.dart';
+
 class LocationDetailScreen extends StatefulWidget {
-  const LocationDetailScreen({super.key});
+  final String? initialAddress;
+  const LocationDetailScreen({super.key, this.initialAddress});
 
   @override
   State<LocationDetailScreen> createState() => _LocationDetailsState();
@@ -17,6 +20,46 @@ class LocationDetailScreen extends StatefulWidget {
 class _LocationDetailsState extends State<LocationDetailScreen> {
   TextEditingController businessName = TextEditingController();
   TextEditingController businessAddress = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialAddress != null) {
+      businessAddress.text = widget.initialAddress!;
+    }
+  }
+
+  Future<void> _saveLocationDetails() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final updatedUser = await authService.updateUser({
+      'businessName': businessName.text.trim(),
+      'businessAddress': businessAddress.text.trim(),
+    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (updatedUser != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AboutServiceScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update location details.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,16 +121,18 @@ class _LocationDetailsState extends State<LocationDetailScreen> {
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.grey),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.location_pin,
                     ),
                     Expanded(
                       child: Text(
-                        AppStrings.address,
-                        style: TextStyle(
+                        businessAddress.text.isNotEmpty
+                            ? businessAddress.text
+                            : AppStrings.businessAddress,
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -116,18 +161,13 @@ class _LocationDetailsState extends State<LocationDetailScreen> {
                 height: 30,
               ),
               InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AboutServiceScreen(),
-                    ),
-                  );
-                },
-                child: const ButtonStyleWidget(
-                  title: AppStrings.next,
-                  colors: AppColors.blueColors,
-                ),
+                onTap: _isLoading ? null : _saveLocationDetails,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : const ButtonStyleWidget(
+                        title: AppStrings.next,
+                        colors: AppColors.blueColors,
+                      ),
               ),
             ],
           ),

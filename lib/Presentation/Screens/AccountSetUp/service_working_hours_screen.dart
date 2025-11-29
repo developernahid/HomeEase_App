@@ -9,6 +9,8 @@ import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/select_row_container_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/textfromfield_widget.dart';
 
+import 'package:HomeEase/services/auth_service.dart';
+
 class ServiceWorkingHoursScreen extends StatefulWidget {
   const ServiceWorkingHoursScreen({super.key});
 
@@ -25,9 +27,56 @@ class _ServiceWorkingHoursState extends State<ServiceWorkingHoursScreen> {
   String iconFalse = AppImages.truenotselectImg;
   String img1 = AppImages.truenotselectImg;
   String img2 = AppImages.truenotselectImg;
-  @override
-  void initState() {
-    super.initState();
+  bool _isLoading = false;
+
+  Future<void> _selectTime(
+      BuildContext context, TextEditingController controller) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      if (mounted) {
+        setState(() {
+          controller.text = picked.format(context);
+        });
+      }
+    }
+  }
+
+  Future<void> _saveWorkingHours() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    String receiveOrderType = '';
+    if (select1) receiveOrderType = 'Fixit';
+    if (select2) receiveOrderType = 'Client';
+
+    final updatedUser = await authService.updateUser({
+      'workingHoursStart': startingTime.text.trim(),
+      'workingHoursEnd': endingTime.text.trim(),
+      'receiveOrderType': receiveOrderType,
+    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (updatedUser != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UploadDocumentScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update working hours.')),
+        );
+      }
+    }
   }
 
   @override
@@ -70,10 +119,15 @@ class _ServiceWorkingHoursState extends State<ServiceWorkingHoursScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              TextFromFieldWidget(
-                controller: startingTime,
-                hintText: AppStrings.eightAM,
-                colors: Colors.black,
+              InkWell(
+                onTap: () => _selectTime(context, startingTime),
+                child: IgnorePointer(
+                  child: TextFromFieldWidget(
+                    controller: startingTime,
+                    hintText: AppStrings.eightAM,
+                    colors: Colors.black,
+                  ),
+                ),
               ),
               const SizedBox(
                 height: 16,
@@ -83,10 +137,15 @@ class _ServiceWorkingHoursState extends State<ServiceWorkingHoursScreen> {
                 style: AppTextStyle.textStyle
                     .copyWith(fontSize: 14, fontWeight: FontWeight.w500),
               ),
-              TextFromFieldWidget(
-                controller: endingTime,
-                hintText: AppStrings.eightPM,
-                colors: Colors.black,
+              InkWell(
+                onTap: () => _selectTime(context, endingTime),
+                child: IgnorePointer(
+                  child: TextFromFieldWidget(
+                    controller: endingTime,
+                    hintText: AppStrings.eightPM,
+                    colors: Colors.black,
+                  ),
+                ),
               ),
               const SizedBox(
                 height: 24,
@@ -135,18 +194,13 @@ class _ServiceWorkingHoursState extends State<ServiceWorkingHoursScreen> {
                 height: 30,
               ),
               InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const UploadDocumentScreen(),
-                    ),
-                  );
-                },
-                child: const ButtonStyleWidget(
-                  title: AppStrings.next,
-                  colors: AppColors.blueColors,
-                ),
+                onTap: _isLoading ? null : _saveWorkingHours,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : const ButtonStyleWidget(
+                        title: AppStrings.next,
+                        colors: AppColors.blueColors,
+                      ),
               ),
             ],
           ),
