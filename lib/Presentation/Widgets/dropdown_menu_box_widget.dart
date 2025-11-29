@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 class DropdownMenuBoxWidget extends StatefulWidget {
   final List<String> itemList;
   final String hintText;
+  final Function(String?)? onChanged;
+  final String? initialValue;
   const DropdownMenuBoxWidget({
     super.key,
     required this.itemList,
     required this.hintText,
+    this.onChanged,
+    this.initialValue,
   });
 
   @override
@@ -15,6 +19,13 @@ class DropdownMenuBoxWidget extends StatefulWidget {
 
 class _DropdownMenuBoxState extends State<DropdownMenuBoxWidget> {
   String? selectedItem;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedItem = widget.initialValue;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -37,6 +48,9 @@ class _DropdownMenuBoxState extends State<DropdownMenuBoxWidget> {
             setState(() {
               selectedItem = value;
             });
+            if (widget.onChanged != null) {
+              widget.onChanged!(value);
+            }
           },
           items: widget.itemList.map((String service) {
             return DropdownMenuItem(

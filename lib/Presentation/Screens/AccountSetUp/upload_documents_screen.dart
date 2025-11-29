@@ -3,11 +3,83 @@ import 'package:HomeEase/AppUtils/app_colors.dart';
 import 'package:HomeEase/AppUtils/app_images.dart';
 import 'package:HomeEase/AppUtils/app_strings.dart';
 import 'package:HomeEase/AppUtils/app_text_style.dart';
-import 'package:HomeEase/Presentation/Screens/AccountSetUp/account_screen.dart';
+import 'package:HomeEase/Presentation/Screens/AccountSetUp/account_details_screen.dart';
 import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 
-class UploadDocumentScreen extends StatelessWidget {
+import 'package:HomeEase/Presentation/Widgets/textfromfield_widget.dart';
+import 'package:HomeEase/services/auth_service.dart';
+
+class UploadDocumentScreen extends StatefulWidget {
   const UploadDocumentScreen({super.key});
+
+  @override
+  State<UploadDocumentScreen> createState() => _UploadDocumentScreenState();
+}
+
+class _UploadDocumentScreenState extends State<UploadDocumentScreen> {
+  final List<TextEditingController> _documentControllers = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _addDocumentField(); // Start with one field
+  }
+
+  void _addDocumentField() {
+    setState(() {
+      _documentControllers.add(TextEditingController());
+    });
+  }
+
+  void _removeDocumentField(int index) {
+    setState(() {
+      _documentControllers[index].dispose();
+      _documentControllers.removeAt(index);
+    });
+  }
+
+  Future<void> _saveDocuments() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    List<String> documents = _documentControllers
+        .map((controller) => controller.text.trim())
+        .where((text) => text.isNotEmpty)
+        .toList();
+
+    final updatedUser = await authService.updateUser({
+      'documents': documents,
+    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (updatedUser != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AccountDetailScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save documents.')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _documentControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +114,7 @@ class UploadDocumentScreen extends StatelessWidget {
               height: 30,
             ),
             Text(
-              AppStrings.uploadService,
+              "Provide links to your documents (PDF)",
               style: AppTextStyle.textStyle.copyWith(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -51,60 +123,66 @@ class UploadDocumentScreen extends StatelessWidget {
             const SizedBox(
               height: 12,
             ),
-            uploadDocument("+ Upload"),
-            const SizedBox(
-              height: 16,
-            ),
-            Text(
-              AppStrings.uploadCertification,
-              style: AppTextStyle.textStyle.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(
-              height: 12,
-            ),
-            uploadDocument("+ Upload"),
-            const SizedBox(
-              height: 127.45,
-            ),
-            InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AccountScreen(),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _documentControllers.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextFromFieldWidget(
+                            controller: _documentControllers[index],
+                            hintText: "Paste PDF Link here",
+                            colors: Colors.black,
+                          ),
+                        ),
+                        if (_documentControllers.length > 1)
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle,
+                                color: Colors.red),
+                            onPressed: () => _removeDocumentField(index),
+                          ),
+                      ],
                     ),
                   );
                 },
-                child: const ButtonStyleWidget(
-                  title: AppStrings.next,
-                  colors: AppColors.blueColors,
-                )),
+              ),
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: _addDocumentField,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.blueColors),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  "+ Add More",
+                  style: TextStyle(
+                    color: AppColors.blueColors,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            InkWell(
+              onTap: _isLoading ? null : _saveDocuments,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const ButtonStyleWidget(
+                      title: AppStrings.next,
+                      colors: AppColors.blueColors,
+                    ),
+            ),
+            const SizedBox(height: 30),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget uploadDocument(String title) {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: Colors.blue,
-          )),
-      child: Center(
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: AppColors.blueColors,
-          ),
         ),
       ),
     );

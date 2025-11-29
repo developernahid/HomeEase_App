@@ -6,6 +6,8 @@ import 'package:HomeEase/AppUtils/app_text_style.dart';
 import 'package:HomeEase/Presentation/Screens/AccountSetUp/phone_number_screen.dart';
 import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/select_container_widget.dart';
+import 'package:HomeEase/services/auth_service.dart';
+import 'package:HomeEase/models/user_model.dart';
 
 class ImLookingForScreen extends StatefulWidget {
   const ImLookingForScreen({super.key});
@@ -90,7 +92,24 @@ class _ImLookingForState extends State<ImLookingForScreen> {
               height: 48,
             ),
             InkWell(
-              onTap: () {
+              onTap: () async {
+                if (!select1 && !select2) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a role.')),
+                  );
+                  return;
+                }
+
+                UserRole role =
+                    select1 ? UserRole.serviceProvider : UserRole.serviceSeeker;
+
+                // Update role in backend
+                await authService.updateUser({
+                  'role': role == UserRole.serviceProvider ? 'vendor' : 'user',
+                });
+
+                if (!mounted) return;
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(

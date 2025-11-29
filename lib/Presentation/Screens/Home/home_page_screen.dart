@@ -1,18 +1,56 @@
+import 'package:HomeEase/Models/user_model.dart';
+import 'package:HomeEase/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:HomeEase/AppUtils/app_colors.dart';
-import 'package:HomeEase/AppUtils/app_constants.dart';
 import 'package:HomeEase/AppUtils/app_images.dart';
 import 'package:HomeEase/AppUtils/app_strings.dart';
 import 'package:HomeEase/AppUtils/app_text_style.dart';
 import 'package:HomeEase/Presentation/Screens/ServiceProvider/service_provider.dart';
+import 'package:HomeEase/Presentation/Screens/Services/service_details_screen.dart';
 import 'package:HomeEase/Presentation/Screens/Services/service_screens.dart';
 import 'package:HomeEase/Presentation/Widgets/service_card_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/service_provider_card_widget.dart';
+import 'package:HomeEase/models/service_category_model.dart';
+import 'package:HomeEase/services/service_category_service.dart';
 
-class HomePageScreen extends StatelessWidget {
-  const HomePageScreen({
-    super.key,
-  });
+class HomePageScreen extends StatefulWidget {
+  const HomePageScreen({super.key});
+
+  @override
+  State<HomePageScreen> createState() => _HomePageScreenState();
+}
+
+class _HomePageScreenState extends State<HomePageScreen> {
+  List<ServiceCategory> _services = [];
+  List<User> _vendors = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    try {
+      final services = await ServiceCategoryService.getServices();
+      final vendors = await authService.getAllVendors();
+      if (mounted) {
+        setState(() {
+          _services = services;
+          _vendors = vendors;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -141,32 +179,48 @@ class HomePageScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Padding(
-                  padding: EdgeInsets.all(6.0),
-                  child: Row(
-                    children: [
-                      ServiceCardWidget(
-                        title: AppStrings.plumbing,
-                        imageUrl: AppImages.plumberImg,
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Row(
+                          children: _services.map((service) {
+                            String imageUrl = AppImages.plumberImg;
+                            if (service.featured.isNotEmpty &&
+                                service.featured[0].image != null) {
+                              imageUrl = service.featured[0].image!;
+                            }
+                            return ServiceCardWidget(
+                              title: service.title,
+                              imageUrl: imageUrl,
+                              onTap: () {
+                                FeaturedService featuredService;
+                                if (service.featured.isNotEmpty) {
+                                  featuredService = service.featured[0];
+                                } else {
+                                  featuredService = FeaturedService(
+                                      id: service.id,
+                                      title: service.title,
+                                      image: imageUrl,
+                                      description:
+                                          'Service Category: ${service.title}');
+                                }
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ServiceDetailsScreen(
+                                        service: featuredService),
+                                  ),
+                                );
+                              },
+                            );
+                          }).toList(),
+                        ),
                       ),
-                      ServiceCardWidget(
-                        title: AppStrings.electricwork,
-                        imageUrl: AppImages.electricworkImg,
-                      ),
-                      ServiceCardWidget(
-                        title: AppStrings.solar,
-                        imageUrl: AppImages.solarenergyImg,
-                      ),
-                      ServiceCardWidget(
-                        title: AppStrings.airConditenior,
-                        imageUrl: AppImages.airconditeniorImg,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -193,21 +247,23 @@ class HomePageScreen extends StatelessWidget {
               ),
               SizedBox(
                 height: 240,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: AppConstants.serviceProvider.length,
-                  itemBuilder: (context, index) {
-                    return ServiceProviderCardWidget(
-                      name: AppConstants.serviceProvider[index].name.toString(),
-                      profession: AppConstants.serviceProvider[index].profession
-                          .toString(),
-                      rating:
-                          AppConstants.serviceProvider[index].rating.toString(),
-                      imageUrl: AppConstants.serviceProvider[index].imageUrl
-                          .toString(),
-                    );
-                  },
-                ),
+                child: _vendors.isEmpty
+                    ? const Center(child: Text("No vendors found"))
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _vendors.length,
+                        itemBuilder: (context, index) {
+                          final vendor = _vendors[index];
+                          return ServiceProviderCardWidget(
+                            name: vendor.username,
+                            profession:
+                                vendor.serviceType ?? 'Service Provider',
+                            rating:
+                                '4.5', // Placeholder rating as User model might not have it yet
+                            imageUrl: vendor.photoURL ?? AppImages.logofixitImg,
+                          );
+                        },
+                      ),
               ),
             ],
           ),

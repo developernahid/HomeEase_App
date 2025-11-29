@@ -7,6 +7,8 @@ import 'package:HomeEase/Presentation/Screens/AccountSetUp/how_to_case_screen.da
 import 'package:HomeEase/Presentation/Widgets/button_style_widget.dart';
 import 'package:HomeEase/Presentation/Widgets/textfromfield_widget.dart';
 
+import 'package:HomeEase/services/auth_service.dart';
+
 class AccountDetailScreen extends StatefulWidget {
   const AccountDetailScreen({super.key});
 
@@ -19,6 +21,41 @@ class _AccountDetailsState extends State<AccountDetailScreen> {
   TextEditingController nicNumberController = TextEditingController();
   TextEditingController phonenumberController = TextEditingController();
   TextEditingController nicExpiryController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> _saveAccountDetails() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final updatedUser = await authService.updateUser({
+      'ownerName': ownerControllerName.text.trim(),
+      'nicNumber': nicNumberController.text.trim(),
+      // 'phoneNumber': phonenumberController.text.trim(), // Avoid overwriting main phone number if this is different?
+      // Or maybe this is a secondary contact. The user model has only one phoneNumber.
+      // I'll assume this is the same or an update to it.
+      // Let's update it if provided.
+      'nicExpiryDate': nicExpiryController.text.trim(),
+    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (updatedUser != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HowToCaseScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update account details.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,17 +118,13 @@ class _AccountDetailsState extends State<AccountDetailScreen> {
               height: 30,
             ),
             InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const HowToCaseScreen()),
-                );
-              },
-              child: const ButtonStyleWidget(
-                title: AppStrings.next,
-                colors: AppColors.blueColors,
-              ),
+              onTap: _isLoading ? null : _saveAccountDetails,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const ButtonStyleWidget(
+                      title: AppStrings.next,
+                      colors: AppColors.blueColors,
+                    ),
             ),
           ],
         ),

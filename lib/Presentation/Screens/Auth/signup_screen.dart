@@ -1,3 +1,4 @@
+import 'package:HomeEase/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:HomeEase/AppUtils/app_colors.dart';
 import 'package:HomeEase/AppUtils/app_images.dart';
@@ -21,6 +22,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  _registerUser() async {
+    final name = nameController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    if (_formKey.currentState!.validate()) {
+      final user = await authService.register(name, email, password);
+      if (user != null) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const ImLookingForScreen(),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Registration failed. Please try again.')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // final double lineSize = MediaQuery.of(context).size.width * 0.38;
@@ -94,10 +121,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               InkWell(
                 onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const ImLookingForScreen()));
+                  _registerUser();
                 },
                 child: const ButtonStyleWidget(
                   title: AppStrings.signUp,

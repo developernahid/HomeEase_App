@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:HomeEase/AppUtils/app_colors.dart';
+import 'package:HomeEase/Presentation/Widgets/custom_image_widget.dart';
 
 class ServiceProviderCardWidget extends StatelessWidget {
   final String name;
@@ -35,9 +36,15 @@ class ServiceProviderCardWidget extends StatelessWidget {
                   width: MediaQuery.of(context).size.width * 0.4 - 16,
                   height: 126,
                   decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      image: DecorationImage(
-                          image: AssetImage(imageUrl), fit: BoxFit.fill)),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: CustomImageWidget(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.fill,
+                    ),
+                  ),
                 ),
                 const SizedBox(
                   height: 3,

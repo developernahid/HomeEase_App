@@ -1,11 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:HomeEase/AppUtils/app_colors.dart';
-import 'package:HomeEase/AppUtils/app_constants.dart';
 import 'package:HomeEase/AppUtils/app_strings.dart';
+import 'package:HomeEase/Models/service_icon.dart';
 import 'package:HomeEase/Presentation/Widgets/service_card_layout_widget.dart';
+import 'package:HomeEase/models/service_category_model.dart';
+import 'package:HomeEase/services/service_category_service.dart';
 
-class ServiceScreens extends StatelessWidget {
+class ServiceScreens extends StatefulWidget {
   const ServiceScreens({super.key});
+
+  @override
+  State<ServiceScreens> createState() => _ServiceScreensState();
+}
+
+class _ServiceScreensState extends State<ServiceScreens> {
+  List<ServiceCategory> _services = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchServices();
+  }
+
+  Future<void> _fetchServices() async {
+    try {
+      final services = await ServiceCategoryService.getServices();
+      if (mounted) {
+        setState(() {
+          _services = services;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching services: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,47 +67,30 @@ class ServiceScreens extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.only(left: 24, right: 24),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              ServiceCardLayoutWidget(
-                title: AppStrings.maintenance,
-                listofdata: AppConstants.maintenanceData,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    ..._services.map((category) {
+                      return ServiceCardLayoutWidget(
+                        title: category.title,
+                        listofdata: category.featured.map((featured) {
+                          return ServiceIcons(
+                            id: featured.id.toString(),
+                            title: featured.title,
+                            description: featured.description,
+                            imageUrl: featured.image,
+                          );
+                        }).toList(),
+                      );
+                    }),
+                    const SizedBox(
+                      height: 30,
+                    ),
+                  ],
+                ),
               ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.cleaningServices,
-                listofdata: AppConstants.cleaningData,
-              ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.homeImprovement,
-                listofdata: AppConstants.homeImprovementData,
-              ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.security,
-                listofdata: AppConstants.securityData,
-              ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.carMaintenanceServices,
-                listofdata: AppConstants.carMaintenanceData,
-              ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.handymanMaintenanceServices,
-                listofdata: AppConstants.handymanServicesData,
-              ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.paintingServices,
-                listofdata: AppConstants.paintingServiceData,
-              ),
-              ServiceCardLayoutWidget(
-                title: AppStrings.otherServices,
-                listofdata: AppConstants.otherServiceData,
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
